@@ -1,0 +1,36 @@
+
+langchain
+langchain-core
+langchain-community
+
+# Mistral API integration for LangChain
+langchain-mistralai
+mistralai
+
+# Vector database
+chromadb
+langchain-chroma
+
+# Embeddings (local embedding models, if you choose to use them)
+sentence-transformers
+
+# Document loading and parsing
+pypdf
+docx2txt
+unstructured
+
+# Environment variables and configuration
+python-dotenv
+
+# Common utilities
+numpy
+pandas
+tiktoken
+
+# Optional web app / API layer (keep if you plan to build a UI or API)
+streamlit
+fastapi
+uvicorn
+
+# Optional: validation and settings
+pydantic
