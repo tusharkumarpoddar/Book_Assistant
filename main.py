@@ -1,32 +1,75 @@
 from dotenv import load_dotenv
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_core.prompts import  ChatPromptTemplate
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.prompts import ChatPromptTemplate
+
 load_dotenv()
 
-data = PyPDFLoader(
-    "documentloaders/sample.pdf"
-   
+embedding_model = HuggingFaceEmbeddings()
+
+vectorstore = Chroma(
+    persist_directory= "chroma_db",
+    embedding_function=embedding_model
 )
 
-docs = data.load()
-
-splitter  = RecursiveCharacterTextSplitter(
-    chunk_size = 1000,
-    chunk_overlap = 200
+retriever = vectorstore.as_retriever(
+    search_type = "mmr",
+    search_kwargs = {
+        "k" : 4,
+        "fetch_k":10,
+        "lambda_mult" :0.5
+    }
 )
 
+llm = ChatGroq(model = "openai/gpt-oss-120b")
 
-template = ChatPromptTemplate.from_messages(
-    [("system","you are a AI that summarises the text"),
-     ("human","{data}")]
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """You are a helpful AI assistant.
+
+Use ONLY the provided context to answer the question.
+
+If the answer is not present in the context,
+say: "I could not find the answer in the document."
+"""
+        ),
+        (
+            "human",
+            """Context:
+{context}
+
+Question:
+{question}
+"""
+        )
+    ]
 )
 
-model = ChatGroq(
-    model="openai/gpt-oss-120b",
+print("Rag system created ")
+
+print("press 0 to exit ")
+
+while True:
+    query = input("You : ")
+    if query == "0":
+        break 
     
-)
-prompt = template.format_messages(data = docs[2].page_content)
-result = model.invoke(prompt)
-print(result.content)
+    docs = retriever.invoke(query)
+
+    context = "\n\n".join(
+        [doc.page_content for doc in docs]
+    )
+    
+    final_prompt = prompt.invoke({
+        "context" :context,
+        "question": query
+    })
+    
+    response = llm.invoke(final_prompt)
+
+    print(f"\n AI: {response.content}")
+    
